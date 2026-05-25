@@ -1,0 +1,596 @@
+.main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+.header {
+  border-bottom: 1px solid var(--border);
+  background: rgba(10, 12, 11, 0.95);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.headerInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoIcon {
+  font-size: 28px;
+  color: var(--green);
+  line-height: 1;
+  filter: drop-shadow(0 0 8px rgba(76, 175, 80, 0.6));
+}
+
+.logoTitle {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--text-bright);
+  line-height: 1;
+}
+
+.logoSub {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  margin-top: 2px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.walletBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid var(--green-dim);
+  border-radius: 2px;
+  background: rgba(76, 175, 80, 0.06);
+  font-size: 13px;
+  color: var(--green);
+}
+
+.walletDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse-green 2s infinite;
+}
+
+.btnConnect {
+  padding: 8px 20px;
+  background: transparent;
+  border: 1px solid var(--green) !important;
+  color: var(--green);
+  font-size: 13px;
+  border-radius: 2px;
+}
+
+.btnConnect:hover {
+  background: rgba(76, 175, 80, 0.1);
+}
+
+/* ── Layout ── */
+.layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  align-items: start;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gameCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 24px;
+}
+
+.cardLabel {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--green);
+  letter-spacing: 0.2em;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardLabel::before {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 1px;
+  background: var(--green);
+}
+
+/* ── Hero ── */
+.heroTitle {
+  font-family: var(--display);
+  font-size: 68px;
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: var(--text-bright);
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
+
+.heroDesc {
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1.7;
+  max-width: 480px;
+  margin-bottom: 24px;
+}
+
+.pillRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 4px 10px;
+  border: 1px solid var(--border2);
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  border-radius: 1px;
+}
+
+/* ── Buttons ── */
+.btnPrimary {
+  padding: 12px 28px;
+  background: var(--green);
+  color: #0a0c0b;
+  font-size: 13px;
+  border-radius: 2px;
+  letter-spacing: 0.1em;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: var(--green-bright);
+  box-shadow: 0 0 20px rgba(76, 175, 80, 0.35);
+}
+
+/* ── Loading ── */
+.loadingBlock {
+  padding: 32px 0;
+}
+
+.loadingBar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.loadingFill {
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+  width: 40%;
+  animation: sweep 1.8s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0% { transform: translateX(-200%); }
+  100% { transform: translateX(350%); }
+}
+
+.txStatus {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* ── Scenario Card ── */
+.scenarioCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--green);
+  border-radius: 3px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.scenarioHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.envTitle {
+  font-family: var(--display);
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-bright);
+  line-height: 1;
+}
+
+.diffBadge {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  padding: 4px 10px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  opacity: 0.9;
+}
+
+.scenarioDesc {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+
+.threatBox {
+  background: rgba(224, 82, 82, 0.08);
+  border: 1px solid rgba(224, 82, 82, 0.3);
+  border-radius: 2px;
+  padding: 12px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.threatLabel {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--red);
+  letter-spacing: 0.15em;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.threatText {
+  color: #f0a0a0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.resourcesSection {}
+
+.resourcesLabel {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  margin-bottom: 10px;
+}
+
+.resourcesList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.resourceItem {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.resourceBullet {
+  color: var(--green);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ── Plan ── */
+.planHint {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+.planInput {
+  resize: vertical;
+  min-height: 160px;
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+
+.planFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.charCount {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.scoringStatus {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.scoringDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+  animation: blink 1s infinite;
+}
+
+/* ── Results ── */
+.resultsCard {
+  background: var(--surface);
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.verdictHeader {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.verdictIcon {
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 1;
+  font-family: var(--display);
+}
+
+.verdictLabel {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.overallScore {
+  margin-left: auto;
+  text-align: right;
+}
+
+.scoreNum {
+  font-family: var(--mono);
+  font-size: 52px;
+  line-height: 1;
+  color: var(--text-bright);
+}
+
+.scoreMax {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.scoreBars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scoreBarRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scoreBarLabel {
+  font-size: 12px;
+  color: var(--text-dim);
+  width: 130px;
+  flex-shrink: 0;
+}
+
+.scoreBarTrack {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.scoreBarFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.8s ease;
+}
+
+.scoreBarVal {
+  font-size: 12px;
+  color: var(--text-dim);
+  width: 28px;
+  text-align: right;
+}
+
+.feedbackBox {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 16px;
+}
+
+.feedbackLabel {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  margin-bottom: 8px;
+}
+
+.feedbackText {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+/* ── Error ── */
+.errorBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  background: rgba(224, 82, 82, 0.08);
+  border: 1px solid rgba(224, 82, 82, 0.3);
+  border-radius: 2px;
+  color: #f0a0a0;
+  font-size: 13px;
+}
+
+.errorIcon {
+  font-family: var(--mono);
+  color: var(--red);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ── Leaderboard ── */
+.emptyLb {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.lbList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lbRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.lbRow:last-child {
+  border-bottom: none;
+}
+
+.lbRank {
+  font-size: 13px;
+  color: var(--green-dim);
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.lbInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.lbAddr {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.lbMeta {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.lbScore {
+  font-size: 18px;
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* ── How scoring ── */
+.howList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.howItem {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.howPct {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--green);
+  width: 36px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.howTitle {
+  font-size: 13px;
+  color: var(--text-bright);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.howDesc {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
