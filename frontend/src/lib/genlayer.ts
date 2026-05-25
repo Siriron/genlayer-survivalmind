@@ -30,7 +30,7 @@ export async function connectWallet(): Promise<string> {
   return accounts[0];
 }
 
-export async function readContract(address: `0x${string}`, functionName: string, args: unknown[] = []) {
+export async function readContract(address: `0x${string}`, functionName: string, args: any[] = []) {
   const result = await readClient.readContract({
     address,
     functionName,
@@ -44,7 +44,7 @@ export async function writeContract(
   walletAddress: string,
   contractAddress: `0x${string}`,
   functionName: string,
-  args: unknown[]
+  args: any[]
 ): Promise<string> {
   const client = getWriteClient(walletAddress);
   const hash = await client.writeContract({
