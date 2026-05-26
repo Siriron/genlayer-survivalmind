@@ -114,21 +114,35 @@ export default function Home() {
       setTxStatus("Waiting for consensus... (this takes 30-90 seconds)");
       await waitForTx(hash);
       setTxStatus("Reading scenario...");
-      // Poll until scenario state is readable (up to 10 attempts)
+      // Poll until scenario state is readable (up to 15 attempts, 5s apart)
       let parsed: any = null;
-      for (let i = 0; i < 10; i++) {
-        await new Promise((r) => setTimeout(r, 4000));
+      for (let i = 0; i < 15; i++) {
+        await new Promise((r) => setTimeout(r, 5000));
         try {
           const raw = await readContract(SCENARIO_ADDRESS, "get_scenario", [newRound]);
-          const candidate = typeof raw === "string" ? JSON.parse(raw) : raw;
-          if (candidate && candidate.environment) {
-            parsed = candidate;
-            break;
+          // Handle all possible return shapes
+          let candidate: any = raw;
+          if (typeof raw === "string") {
+            try { candidate = JSON.parse(raw); } catch { candidate = null; }
           }
-        } catch {
-          // keep retrying
+          // Log what we got for debugging
+          console.log("get_scenario attempt", i + 1, "raw:", raw, "parsed:", candidate);
+          if (candidate && typeof candidate === "object" && Object.keys(candidate).length > 0) {
+            // Accept any non-empty object — environment may come under different key
+            if (candidate.environment || candidate.description || candidate.scenario) {
+              parsed = candidate;
+              break;
+            }
+            // If it has round_id it's valid even if fields differ
+            if (candidate.round_id || candidate.status) {
+              parsed = candidate;
+              break;
+            }
+          }
+        } catch (readErr) {
+          console.log("read attempt", i + 1, "error:", readErr);
         }
-        setTxStatus(`Reading scenario... (attempt ${i + 2})`);
+        setTxStatus(`Reading scenario... (attempt ${i + 2}/15)`);
       }
       if (!parsed) {
         throw new Error("Scenario could not be read after consensus. Check explorer and try again.");
