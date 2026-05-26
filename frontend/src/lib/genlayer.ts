@@ -52,12 +52,12 @@ export async function writeContract(
     args,
     value: BigInt(0),
   });
-  return hash;
+  return hash as string;
 }
 
 export async function waitForTx(hash: string) {
-  const receipt = await readClient.waitForTransactionReceipt({
-    hash: hash as `0x${string}`,
+  const receipt = await (readClient as any).waitForTransactionReceipt({
+    hash,
     status: TransactionStatus.ACCEPTED,
     retries: 60,
     interval: 5000,
