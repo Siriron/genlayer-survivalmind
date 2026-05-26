@@ -114,12 +114,24 @@ export default function Home() {
       setTxStatus("Waiting for consensus... (this takes 30-90 seconds)");
       await waitForTx(hash);
       setTxStatus("Reading scenario...");
-      // Small delay to ensure state is readable
-      await new Promise((r) => setTimeout(r, 3000));
-      const raw = await readContract(SCENARIO_ADDRESS, "get_scenario", [newRound]);
-      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-      if (!parsed || !parsed.environment) {
-        throw new Error("Scenario not ready yet. Try again in a moment.");
+      // Poll until scenario state is readable (up to 10 attempts)
+      let parsed: any = null;
+      for (let i = 0; i < 10; i++) {
+        await new Promise((r) => setTimeout(r, 4000));
+        try {
+          const raw = await readContract(SCENARIO_ADDRESS, "get_scenario", [newRound]);
+          const candidate = typeof raw === "string" ? JSON.parse(raw) : raw;
+          if (candidate && candidate.environment) {
+            parsed = candidate;
+            break;
+          }
+        } catch {
+          // keep retrying
+        }
+        setTxStatus(`Reading scenario... (attempt ${i + 2})`);
+      }
+      if (!parsed) {
+        throw new Error("Scenario could not be read after consensus. Check explorer and try again.");
       }
       setScenario(parsed as Scenario);
       setPhase("submitting");
@@ -156,11 +168,23 @@ export default function Home() {
       setTxStatus("Waiting for AI judgment... (this takes 30-90 seconds)");
       await waitForTx(scoreHash);
       setTxStatus("Reading your results...");
-      await new Promise((r) => setTimeout(r, 3000));
-      const raw = await readContract(SCORING_ADDRESS, "get_score", [roundId, wallet]);
-      const result = typeof raw === "string" ? JSON.parse(raw) : raw;
-      if (!result || result.overall_score === undefined) {
-        throw new Error("Score not ready yet. Please try again.");
+      let result: any = null;
+      for (let i = 0; i < 10; i++) {
+        await new Promise((r) => setTimeout(r, 4000));
+        try {
+          const raw = await readContract(SCORING_ADDRESS, "get_score", [roundId, wallet]);
+          const candidate = typeof raw === "string" ? JSON.parse(raw) : raw;
+          if (candidate && candidate.overall_score !== undefined) {
+            result = candidate;
+            break;
+          }
+        } catch {
+          // keep retrying
+        }
+        setTxStatus(`Reading results... (attempt ${i + 2})`);
+      }
+      if (!result) {
+        throw new Error("Score could not be read after consensus. Check explorer and try again.");
       }
       setScore(result as ScoreResult);
       setPhase("results");
