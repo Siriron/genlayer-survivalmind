@@ -23,11 +23,10 @@ export async function connectWallet(): Promise<string> {
 
 export async function readContract(address: `0x${string}`, functionName: string, args: any[] = []) {
   const client = getReadClient();
-  const result = await client.readContract({
+  const result = await (client as any).readContract({
     address,
     functionName,
     args,
-    stateStatus: "accepted",
   });
   return result;
 }
@@ -45,7 +44,7 @@ export async function writeContract(
     provider: (window as any).ethereum,
   });
   await client.connect("studionet");
-  const hash = await client.writeContract({
+  const hash = await (client as any).writeContract({
     address: contractAddress,
     functionName,
     args,
@@ -56,8 +55,8 @@ export async function writeContract(
 
 export async function waitForTx(hash: string) {
   const client = getReadClient();
-  const receipt = await client.waitForTransactionReceipt({
-    hash: hash as any,
+  const receipt = await (client as any).waitForTransactionReceipt({
+    hash,
     status: TransactionStatus.ACCEPTED,
     retries: 120,
     interval: 5000,
