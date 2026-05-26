@@ -49,6 +49,7 @@ export async function writeContract(
     address: contractAddress,
     functionName,
     args,
+    value: 0n,
   });
   return hash as string;
 }
