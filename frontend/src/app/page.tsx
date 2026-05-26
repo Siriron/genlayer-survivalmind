@@ -72,7 +72,7 @@ export default function Home() {
 
   const loadLeaderboard = useCallback(async () => {
     try {
-      const raw = await readContract(SCORING_ADDRESS, "get_leaderboard", []);
+      const raw = await readContract(SCORING_ADDRESS, "get_leaderboard", [], wallet || undefined);
       const data = typeof raw === "string" ? JSON.parse(raw) : raw;
       if (data && typeof data === "object") {
         const entries = Object.values(data) as LeaderboardEntry[];
@@ -119,7 +119,7 @@ export default function Home() {
       for (let i = 0; i < 15; i++) {
         await new Promise((r) => setTimeout(r, 5000));
         try {
-          const raw = await readContract(SCENARIO_ADDRESS, "get_scenario", [newRound]);
+          const raw = await readContract(SCENARIO_ADDRESS, "get_scenario", [newRound], wallet);
           // Handle all possible return shapes
           let candidate: any = raw;
           if (typeof raw === "string") {
@@ -186,7 +186,7 @@ export default function Home() {
       for (let i = 0; i < 10; i++) {
         await new Promise((r) => setTimeout(r, 4000));
         try {
-          const raw = await readContract(SCORING_ADDRESS, "get_score", [roundId, wallet]);
+          const raw = await readContract(SCORING_ADDRESS, "get_score", [roundId, wallet], wallet);
           const candidate = typeof raw === "string" ? JSON.parse(raw) : raw;
           if (candidate && candidate.overall_score !== undefined) {
             result = candidate;
