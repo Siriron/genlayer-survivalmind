@@ -8,15 +8,9 @@ export const SCENARIO_ADDRESS = (process.env.NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRE
 export const SUBMISSION_ADDRESS = (process.env.NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS || "") as `0x${string}`;
 export const SCORING_ADDRESS = (process.env.NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS || "") as `0x${string}`;
 
-export const readClient = createClient({ chain: testnetBradbury });
-
-export function getWriteClient(address: string) {
-  if (typeof window === "undefined") throw new Error("Write client only available in browser");
-  return createClient({
-    chain: testnetBradbury,
-    account: address as `0x${string}`,
-    provider: (window as any).ethereum,
-  });
+// Lazy read client — created only in browser to avoid SSR issues
+function getReadClient() {
+  return createClient({ chain: testnetBradbury });
 }
 
 export async function connectWallet(): Promise<string> {
@@ -25,13 +19,12 @@ export async function connectWallet(): Promise<string> {
   if (!eth) throw new Error("No wallet found. Install MetaMask.");
   const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
   if (!accounts || accounts.length === 0) throw new Error("No accounts found");
-  const client = getWriteClient(accounts[0]);
-  await client.connect("testnetBradbury");
   return accounts[0];
 }
 
 export async function readContract(address: `0x${string}`, functionName: string, args: any[] = []) {
-  const result = await readClient.readContract({
+  const client = getReadClient();
+  const result = await client.readContract({
     address,
     functionName,
     args,
@@ -45,21 +38,27 @@ export async function writeContract(
   functionName: string,
   args: any[]
 ): Promise<string> {
-  const client = getWriteClient(walletAddress);
+  if (typeof window === "undefined") throw new Error("No window");
+  const client = createClient({
+    chain: testnetBradbury,
+    account: walletAddress as `0x${string}`,
+    provider: (window as any).ethereum,
+  });
+  await client.connect("testnetBradbury");
   const hash = await client.writeContract({
     address: contractAddress,
     functionName,
     args,
-    value: BigInt(0),
   });
   return hash as string;
 }
 
 export async function waitForTx(hash: string) {
-  const receipt = await (readClient as any).waitForTransactionReceipt({
+  const client = getReadClient();
+  const receipt = await (client as any).waitForTransactionReceipt({
     hash,
     status: TransactionStatus.ACCEPTED,
-    retries: 60,
+    retries: 120,
     interval: 5000,
   });
   return receipt;
