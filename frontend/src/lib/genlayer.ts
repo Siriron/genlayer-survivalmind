@@ -49,7 +49,7 @@ export async function writeContract(
     address: contractAddress,
     functionName,
     args,
-    value: 0n,
+    value: BigInt(0) as unknown as bigint,
   });
   return hash as string;
 }
