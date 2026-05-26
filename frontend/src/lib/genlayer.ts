@@ -18,6 +18,13 @@ export async function connectWallet(): Promise<string> {
   if (!eth) throw new Error("No wallet found. Install MetaMask.");
   const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
   if (!accounts || accounts.length === 0) throw new Error("No accounts found");
+  // Switch network to studionet upfront
+  const client = createClient({
+    chain: studionet,
+    account: accounts[0] as `0x${string}`,
+    provider: eth,
+  });
+  await (client as any).connect("studionet");
   return accounts[0];
 }
 
@@ -38,12 +45,14 @@ export async function writeContract(
   args: any[]
 ): Promise<string> {
   if (typeof window === "undefined") throw new Error("No window");
+  const eth = (window as any).ethereum;
+  // Re-request accounts to ensure authorization is fresh
+  await eth.request({ method: "eth_requestAccounts" });
   const client = createClient({
     chain: studionet,
     account: walletAddress as `0x${string}`,
-    provider: (window as any).ethereum,
+    provider: eth,
   });
-  await client.connect("studionet");
   const hash = await (client as any).writeContract({
     address: contractAddress,
     functionName,
