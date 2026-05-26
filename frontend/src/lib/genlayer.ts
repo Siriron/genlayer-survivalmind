@@ -15,13 +15,13 @@ export function getWriteClient(address: string) {
   return createClient({
     chain: testnetBradbury,
     account: address as `0x${string}`,
-    provider: (window as Window & { ethereum?: unknown }).ethereum,
+    provider: (window as any).ethereum,
   });
 }
 
 export async function connectWallet(): Promise<string> {
   if (typeof window === "undefined") throw new Error("No window");
-  const eth = (window as Window & { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum;
+  const eth = (window as any).ethereum;
   if (!eth) throw new Error("No wallet found. Install MetaMask.");
   const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
   if (!accounts || accounts.length === 0) throw new Error("No accounts found");
@@ -35,7 +35,6 @@ export async function readContract(address: `0x${string}`, functionName: string,
     address,
     functionName,
     args,
-    stateStatus: "accepted",
   });
   return result;
 }
