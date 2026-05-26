@@ -9,7 +9,6 @@ import {
   SCENARIO_ADDRESS,
   SUBMISSION_ADDRESS,
   SCORING_ADDRESS,
-  ExecutionResult,
 } from "@/lib/genlayer";
 import styles from "./page.module.css";
 
@@ -75,9 +74,11 @@ export default function Home() {
     try {
       const raw = await readContract(SCORING_ADDRESS, "get_leaderboard", []);
       const data = typeof raw === "string" ? JSON.parse(raw) : raw;
-      const entries = Object.values(data) as LeaderboardEntry[];
-      entries.sort((a, b) => b.best_score - a.best_score);
-      setLeaderboard(entries.slice(0, 10));
+      if (data && typeof data === "object") {
+        const entries = Object.values(data) as LeaderboardEntry[];
+        entries.sort((a, b) => b.best_score - a.best_score);
+        setLeaderboard(entries.slice(0, 10));
+      }
     } catch {
       // leaderboard empty or not loaded yet
     }
@@ -85,8 +86,7 @@ export default function Home() {
 
   useEffect(() => {
     loadLeaderboard();
-    const id = Date.now().toString();
-    setRoundId(id);
+    setRoundId(Date.now().toString());
   }, [loadLeaderboard]);
 
   async function handleConnect() {
@@ -111,15 +111,17 @@ export default function Home() {
     try {
       setTxStatus("Requesting GenLayer AI to generate your scenario...");
       const hash = await writeContract(wallet, SCENARIO_ADDRESS, "generate_scenario", [newRound]);
-      setTxStatus("Waiting for consensus...");
-      const receipt = await waitForTx(hash);
-      if (receipt.txExecutionResultName !== ExecutionResult.FINISHED_WITH_RETURN) {
-        throw new Error("Scenario generation failed on-chain.");
-      }
+      setTxStatus("Waiting for consensus... (this takes 30-90 seconds)");
+      await waitForTx(hash);
       setTxStatus("Reading scenario...");
+      // Small delay to ensure state is readable
+      await new Promise((r) => setTimeout(r, 3000));
       const raw = await readContract(SCENARIO_ADDRESS, "get_scenario", [newRound]);
-      const data: Scenario = typeof raw === "string" ? JSON.parse(raw) : raw;
-      setScenario(data);
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (!parsed || !parsed.environment) {
+        throw new Error("Scenario not ready yet. Try again in a moment.");
+      }
+      setScenario(parsed as Scenario);
       setPhase("submitting");
       setTxStatus("");
     } catch (e) {
@@ -151,15 +153,16 @@ export default function Home() {
         scenarioJson,
         plan.trim(),
       ]);
-      setTxStatus("Waiting for AI judgment...");
-      const scoreReceipt = await waitForTx(scoreHash);
-      if (scoreReceipt.txExecutionResultName !== ExecutionResult.FINISHED_WITH_RETURN) {
-        throw new Error("Scoring failed on-chain.");
-      }
+      setTxStatus("Waiting for AI judgment... (this takes 30-90 seconds)");
+      await waitForTx(scoreHash);
       setTxStatus("Reading your results...");
+      await new Promise((r) => setTimeout(r, 3000));
       const raw = await readContract(SCORING_ADDRESS, "get_score", [roundId, wallet]);
-      const result: ScoreResult = typeof raw === "string" ? JSON.parse(raw) : raw;
-      setScore(result);
+      const result = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (!result || result.overall_score === undefined) {
+        throw new Error("Score not ready yet. Please try again.");
+      }
+      setScore(result as ScoreResult);
       setPhase("results");
       setTxStatus("");
       await loadLeaderboard();
@@ -177,15 +180,15 @@ export default function Home() {
     setPlan("");
     setError("");
     setTxStatus("");
-    const id = Date.now().toString();
-    setRoundId(id);
+    setRoundId(Date.now().toString());
   }
 
-  const verdictInfo = score ? VERDICT_LABEL[score.verdict] || { label: score.verdict.toUpperCase(), color: "#c8d5b8", icon: "?" } : null;
+  const verdictInfo = score
+    ? VERDICT_LABEL[score.verdict] || { label: score.verdict.toUpperCase(), color: "#c8d5b8", icon: "?" }
+    : null;
 
   return (
     <main className={styles.main}>
-      {/* Header */}
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <div className={styles.logo}>
@@ -211,10 +214,8 @@ export default function Home() {
       </header>
 
       <div className={styles.layout}>
-        {/* Left — game */}
         <div className={styles.gameCol}>
 
-          {/* Idle state */}
           {phase === "idle" && (
             <div className={styles.card + " animate-in"}>
               <div className={styles.cardLabel}>MISSION BRIEFING</div>
@@ -243,7 +244,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Generating */}
           {phase === "generating" && (
             <div className={styles.card + " animate-in"}>
               <div className={styles.cardLabel}>GENERATING SCENARIO</div>
@@ -256,7 +256,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Scenario + Plan submission */}
           {(phase === "submitting" || phase === "scoring") && scenario && (
             <div className="animate-in">
               <div className={styles.scenarioCard}>
@@ -272,14 +271,11 @@ export default function Home() {
                     {scenario.difficulty.toUpperCase()}
                   </div>
                 </div>
-
                 <p className={styles.scenarioDesc}>{scenario.description}</p>
-
                 <div className={styles.threatBox}>
                   <span className={styles.threatLabel}>IMMEDIATE THREAT</span>
                   <span className={styles.threatText}>{scenario.immediate_threat}</span>
                 </div>
-
                 <div className={styles.resourcesSection}>
                   <div className={styles.resourcesLabel}>AVAILABLE RESOURCES</div>
                   <div className={styles.resourcesList}>
@@ -328,7 +324,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Results */}
           {phase === "results" && score && scenario && verdictInfo && (
             <div className="animate-in">
               <div className={styles.resultsCard} style={{ borderColor: verdictInfo.color }}>
@@ -347,7 +342,6 @@ export default function Home() {
                     <div className={styles.scoreMax}>/100</div>
                   </div>
                 </div>
-
                 <div className={styles.scoreBars}>
                   {[
                     { label: "Resourcefulness", value: score.resourcefulness },
@@ -359,19 +353,20 @@ export default function Home() {
                       <div className={styles.scoreBarTrack}>
                         <div
                           className={styles.scoreBarFill}
-                          style={{ width: `${value}%`, backgroundColor: value >= 70 ? "#4caf50" : value >= 40 ? "#f5a623" : "#e05252" }}
+                          style={{
+                            width: `${value}%`,
+                            backgroundColor: value >= 70 ? "#4caf50" : value >= 40 ? "#f5a623" : "#e05252",
+                          }}
                         />
                       </div>
                       <div className={styles.scoreBarVal + " mono"}>{value}</div>
                     </div>
                   ))}
                 </div>
-
                 <div className={styles.feedbackBox}>
                   <div className={styles.feedbackLabel}>AI FEEDBACK</div>
                   <p className={styles.feedbackText}>{score.feedback}</p>
                 </div>
-
                 <button className={styles.btnPrimary} onClick={handlePlayAgain}>
                   Play Again
                 </button>
@@ -387,7 +382,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* Right — leaderboard */}
         <aside className={styles.sidebar}>
           <div className={styles.card}>
             <div className={styles.cardLabel}>SURVIVOR LEADERBOARD</div>
@@ -398,7 +392,7 @@ export default function Home() {
                 {leaderboard.map((entry, i) => (
                   <div key={entry.player} className={styles.lbRow}>
                     <div className={styles.lbRank + " mono"}>
-                      {i === 0 ? "01" : i === 1 ? "02" : i === 2 ? "03" : `0${i + 1}`}
+                      {String(i + 1).padStart(2, "0")}
                     </div>
                     <div className={styles.lbInfo}>
                       <div className={styles.lbAddr + " mono"}>{shortAddr(entry.player)}</div>
