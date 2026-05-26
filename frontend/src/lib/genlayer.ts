@@ -8,12 +8,6 @@ export const SCENARIO_ADDRESS = (process.env.NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRE
 export const SUBMISSION_ADDRESS = (process.env.NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS || "") as `0x${string}`;
 export const SCORING_ADDRESS = (process.env.NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS || "") as `0x${string}`;
 
-const STUDIO_RPC = "https://studio.genlayer.com:8443/api";
-
-function getReadClient() {
-  return createClient({ chain: studionet });
-}
-
 export async function connectWallet(): Promise<string> {
   if (typeof window === "undefined") throw new Error("No window");
   const eth = (window as any).ethereum;
@@ -29,33 +23,25 @@ export async function connectWallet(): Promise<string> {
   return accounts[0];
 }
 
-// Read directly via JSON-RPC — genlayer-js readContract returns {} on studionet
-export async function readContract(address: `0x${string}`, functionName: string, args: any[] = []) {
-  const payload = {
-    jsonrpc: "2.0",
-    method: "gen_call",
-    id: Date.now(),
-    params: [
-      {
-        to: address,
-        data: JSON.stringify({ method: functionName, args }),
-      },
-      "latest",
-    ],
-  };
-  const res = await fetch(STUDIO_RPC, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const json = await res.json();
-  console.log("readContract RPC response:", JSON.stringify(json));
-  if (json.error) throw new Error(json.error.message || "RPC error");
-  const result = json.result;
-  if (result === null || result === undefined) return {};
-  if (typeof result === "string") {
-    try { return JSON.parse(result); } catch { return result; }
+function getClient(walletAddress?: string) {
+  if (typeof window !== "undefined" && (window as any).ethereum && walletAddress) {
+    return createClient({
+      chain: studionet,
+      account: walletAddress as `0x${string}`,
+      provider: (window as any).ethereum,
+    });
   }
+  return createClient({ chain: studionet });
+}
+
+export async function readContract(address: `0x${string}`, functionName: string, args: any[] = [], walletAddress?: string) {
+  const client = getClient(walletAddress);
+  const result = await (client as any).readContract({
+    address,
+    functionName,
+    args,
+  });
+  console.log("readContract result:", JSON.stringify(result));
   return result;
 }
 
@@ -83,7 +69,7 @@ export async function writeContract(
 }
 
 export async function waitForTx(hash: string) {
-  const client = getReadClient();
+  const client = createClient({ chain: studionet });
   const receipt = await (client as any).waitForTransactionReceipt({
     hash,
     status: TransactionStatus.FINALIZED,
