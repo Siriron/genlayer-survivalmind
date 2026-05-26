@@ -1,5 +1,5 @@
 import { createClient } from "genlayer-js";
-import { testnetBradbury } from "genlayer-js/chains";
+import { studionet } from "genlayer-js/chains";
 import { TransactionStatus, ExecutionResult } from "genlayer-js/types";
 
 export { TransactionStatus, ExecutionResult };
@@ -8,9 +8,8 @@ export const SCENARIO_ADDRESS = (process.env.NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRE
 export const SUBMISSION_ADDRESS = (process.env.NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS || "") as `0x${string}`;
 export const SCORING_ADDRESS = (process.env.NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS || "") as `0x${string}`;
 
-// Lazy read client — created only in browser to avoid SSR issues
 function getReadClient() {
-  return createClient({ chain: testnetBradbury });
+  return createClient({ chain: studionet });
 }
 
 export async function connectWallet(): Promise<string> {
@@ -28,6 +27,7 @@ export async function readContract(address: `0x${string}`, functionName: string,
     address,
     functionName,
     args,
+    stateStatus: "accepted",
   });
   return result;
 }
@@ -40,24 +40,24 @@ export async function writeContract(
 ): Promise<string> {
   if (typeof window === "undefined") throw new Error("No window");
   const client = createClient({
-    chain: testnetBradbury,
+    chain: studionet,
     account: walletAddress as `0x${string}`,
     provider: (window as any).ethereum,
   });
-  await client.connect("testnetBradbury");
+  await client.connect("studionet");
   const hash = await client.writeContract({
     address: contractAddress,
     functionName,
     args,
-    value: BigInt(0) as unknown as bigint,
+    value: BigInt(0),
   });
   return hash as string;
 }
 
 export async function waitForTx(hash: string) {
   const client = getReadClient();
-  const receipt = await (client as any).waitForTransactionReceipt({
-    hash,
+  const receipt = await client.waitForTransactionReceipt({
+    hash: hash as any,
     status: TransactionStatus.ACCEPTED,
     retries: 120,
     interval: 5000,
