@@ -1,4 +1,4 @@
-# { "Depends": "py-genlayer:latest" }
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 
 from genlayer import *
 import json
@@ -38,17 +38,21 @@ Generate a unique vivid survival scenario. Return ONLY a JSON object with these 
 
 No explanation, no markdown, only valid JSON."""
 
-        def non_det():
-            try:
-                raw = gl.nondet.exec_prompt(prompt)
-                fence = chr(96) * 3
-                cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
-                return json.dumps(json.loads(cleaned))
-            except Exception as e:
-                return json.dumps({"error": str(e)})
+        def leader_fn():
+            raw = gl.nondet.exec_prompt(prompt)
+            fence = chr(96) * 3
+            cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
+            return json.loads(cleaned)
 
-        result_str = gl.eq_principle.strict_eq(non_det)
-        result = json.loads(result_str)
+        def validator_fn(leader_result):
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            val = leader_result.result
+            if not isinstance(val, dict):
+                return False
+            return all(k in val for k in ["environment", "description", "available_resources", "immediate_threat", "difficulty"])
+
+        result = gl.run_nondet_unsafe(leader_fn, validator_fn)
 
         scenarios = self._get_scenarios()
         entry = {

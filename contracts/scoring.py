@@ -1,4 +1,4 @@
-# { "Depends": "py-genlayer:latest" }
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 
 from genlayer import *
 import json
@@ -54,17 +54,25 @@ Also provide:
 Return ONLY valid JSON with fields: resourcefulness, realism, priority, overall_score, verdict, feedback.
 No markdown, no explanation."""
 
-        def non_det():
-            try:
-                raw = gl.nondet.exec_prompt(prompt)
-                fence = chr(96) * 3
-                cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
-                return json.dumps(json.loads(cleaned))
-            except Exception as e:
-                return json.dumps({"error": str(e)})
+        def leader_fn():
+            raw = gl.nondet.exec_prompt(prompt)
+            fence = chr(96) * 3
+            cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
+            return json.loads(cleaned)
 
-        result_str = gl.eq_principle.strict_eq(non_det)
-        result = json.loads(result_str)
+        def validator_fn(leader_result):
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            val = leader_result.result
+            if not isinstance(val, dict):
+                return False
+            required = ["resourcefulness", "realism", "priority", "overall_score", "verdict", "feedback"]
+            if not all(k in val for k in required):
+                return False
+            score = val.get("overall_score", -1)
+            return isinstance(score, int) and 0 <= score <= 100
+
+        result = gl.run_nondet_unsafe(leader_fn, validator_fn)
 
         scores = self._get_scores()
         key = f"{round_id}:{player_address}"
@@ -131,16 +139,20 @@ Player A ({player_a}): {json.dumps(latest_a)}
 Player B ({player_b}): {json.dumps(latest_b)}
 Return ONLY valid JSON with: winner (address or "tie"), margin (int), reasoning (1 sentence)."""
 
-        def non_det():
-            try:
-                raw = gl.nondet.exec_prompt(prompt)
-                fence = chr(96) * 3
-                cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
-                return json.dumps(json.loads(cleaned))
-            except Exception as e:
-                return json.dumps({"error": str(e)})
+        def leader_fn():
+            raw = gl.nondet.exec_prompt(prompt)
+            fence = chr(96) * 3
+            cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
+            return json.loads(cleaned)
 
-        return gl.eq_principle.strict_eq(non_det)
+        def validator_fn(leader_result):
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            val = leader_result.result
+            return isinstance(val, dict) and "winner" in val
+
+        result = gl.run_nondet_unsafe(leader_fn, validator_fn)
+        return json.dumps(result)
 
     @gl.public.write
     def flag_score(self, round_id: str, player_address: str) -> typing.Any:
