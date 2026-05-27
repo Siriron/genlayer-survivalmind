@@ -1,7 +1,8 @@
-# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+# { "Depends": "py-genlayer:latest" }
 
 from genlayer import *
 import json
+import typing
 from datetime import datetime, timezone
 
 
@@ -31,7 +32,7 @@ class SurvivalScoring(gl.Contract):
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @gl.public.write
-    def score_plan(self, round_id: str, player_address: str, scenario_json: str, plan: str) -> None:
+    def score_plan(self, round_id: str, player_address: str, scenario_json: str, plan: str) -> typing.Any:
         prompt = f"""You are an expert survival instructor and judge.
 
 A player submitted a survival plan for this scenario:
@@ -53,13 +54,16 @@ Also provide:
 Return ONLY valid JSON with fields: resourcefulness, realism, priority, overall_score, verdict, feedback.
 No markdown, no explanation."""
 
-        def nondet():
-            raw = gl.exec_prompt(prompt)
-            fence = chr(96) * 3
-            cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
-            return json.dumps(json.loads(cleaned))
+        def non_det():
+            try:
+                raw = gl.nondet.exec_prompt(prompt)
+                fence = chr(96) * 3
+                cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
+                return json.dumps(json.loads(cleaned))
+            except Exception as e:
+                return json.dumps({"error": str(e)})
 
-        result_str = gl.eq_principle_strict_eq(nondet)
+        result_str = gl.eq_principle.strict_eq(non_det)
         result = json.loads(result_str)
 
         scores = self._get_scores()
@@ -108,18 +112,17 @@ No markdown, no explanation."""
             lb["history"] = lb["history"][-20:]
         leaderboard[player_address] = lb
         self._save_leaderboard(leaderboard)
+        return json.dumps(entry)
 
     @gl.public.write
-    def refresh(self, round_id: str, player_address: str, scenario_json: str, plan: str) -> None:
-        self.score_plan(round_id, player_address, scenario_json, plan)
+    def refresh(self, round_id: str, player_address: str, scenario_json: str, plan: str) -> typing.Any:
+        return self.score_plan(round_id, player_address, scenario_json, plan)
 
     @gl.public.write
-    def compare(self, round_id: str, player_a: str, player_b: str) -> None:
+    def compare(self, round_id: str, player_a: str, player_b: str) -> typing.Any:
         scores = self._get_scores()
-        key_a = f"{round_id}:{player_a}"
-        key_b = f"{round_id}:{player_b}"
-        hist_a = scores.get(key_a, [])
-        hist_b = scores.get(key_b, [])
+        hist_a = scores.get(f"{round_id}:{player_a}", [])
+        hist_b = scores.get(f"{round_id}:{player_b}", [])
         latest_a = hist_a[-1] if hist_a else {}
         latest_b = hist_b[-1] if hist_b else {}
 
@@ -128,31 +131,36 @@ Player A ({player_a}): {json.dumps(latest_a)}
 Player B ({player_b}): {json.dumps(latest_b)}
 Return ONLY valid JSON with: winner (address or "tie"), margin (int), reasoning (1 sentence)."""
 
-        def nondet():
-            raw = gl.exec_prompt(prompt)
-            fence = chr(96) * 3
-            cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
-            return json.dumps(json.loads(cleaned))
+        def non_det():
+            try:
+                raw = gl.nondet.exec_prompt(prompt)
+                fence = chr(96) * 3
+                cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
+                return json.dumps(json.loads(cleaned))
+            except Exception as e:
+                return json.dumps({"error": str(e)})
 
-        gl.eq_principle_strict_eq(nondet)
+        return gl.eq_principle.strict_eq(non_det)
 
     @gl.public.write
-    def flag_score(self, round_id: str, player_address: str) -> None:
+    def flag_score(self, round_id: str, player_address: str) -> typing.Any:
         scores = self._get_scores()
         key = f"{round_id}:{player_address}"
         if key in scores and scores[key]:
             scores[key][-1]["flagged"] = True
             scores[key][-1]["flagged_at"] = self._now()
             self._save_scores(scores)
+        return f"Flagged {player_address} in round {round_id}"
 
     @gl.public.write
-    def archive_round(self, round_id: str) -> None:
+    def archive_round(self, round_id: str) -> typing.Any:
         scores = self._get_scores()
         for key in scores:
             if key.startswith(f"{round_id}:"):
                 for entry in scores[key]:
                     entry["archived"] = True
         self._save_scores(scores)
+        return f"Archived round {round_id}"
 
     @gl.public.view
     def get_score(self, round_id: str, player_address: str) -> str:
