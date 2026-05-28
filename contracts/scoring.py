@@ -33,46 +33,34 @@ class SurvivalScoring(gl.Contract):
 
     @gl.public.write
     def score_plan(self, round_id: str, player_address: str, scenario_json: str, plan: str) -> typing.Any:
-        prompt = f"""You are an expert survival instructor and judge.
+        task = f"""You are an expert survival instructor. A player submitted a survival plan.
 
-A player submitted a survival plan for this scenario:
+SCENARIO:
 {scenario_json}
 
 PLAYER PLAN:
 {plan}
 
-Score each dimension from 0 to 100:
-1. resourcefulness: creative use of available resources
-2. realism: physically and logically feasible
-3. priority: addresses immediate threat first, correct survival order
+Score the plan and respond with the following JSON format:
+{{
+    "resourcefulness": int, // 0-100, creative use of available resources
+    "realism": int, // 0-100, physically and logically feasible
+    "priority": int, // 0-100, addresses immediate threat first, correct survival order
+    "overall_score": int, // 0-100, weighted: priority 40%, resourcefulness 35%, realism 25%
+    "verdict": str, // one of: survivor, likely_survivor, unlikely_survivor, did_not_survive
+    "feedback": str // 2 sentences of specific honest feedback
+}}
+It is mandatory that you respond only using the JSON format above,
+nothing else. Don't include any other words or characters,
+your output must be only JSON without any formatting prefix or suffix.
+This result should be perfectly parsable by a JSON parser without errors."""
 
-Also provide:
-- overall_score: integer 0-100 (priority 40%, resourcefulness 35%, realism 25%)
-- verdict: one of: survivor, likely_survivor, unlikely_survivor, did_not_survive
-- feedback: 2 sentences of specific honest feedback
+        def nondet() -> str:
+            result = gl.nondet.exec_prompt(task).replace("```json", "").replace("```", "")
+            return json.dumps(json.loads(result), sort_keys=True)
 
-Return ONLY valid JSON with fields: resourcefulness, realism, priority, overall_score, verdict, feedback.
-No markdown, no explanation."""
-
-        def leader_fn():
-            raw = gl.nondet.exec_prompt(prompt)
-            fence = chr(96) * 3
-            cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
-            return json.loads(cleaned)
-
-        def validator_fn(leader_result):
-            if not isinstance(leader_result, gl.vm.Return):
-                return False
-            val = leader_result.result
-            if not isinstance(val, dict):
-                return False
-            required = ["resourcefulness", "realism", "priority", "overall_score", "verdict", "feedback"]
-            if not all(k in val for k in required):
-                return False
-            score = val.get("overall_score", -1)
-            return isinstance(score, int) and 0 <= score <= 100
-
-        result = gl.run_nondet_unsafe(leader_fn, validator_fn)
+        result_str = gl.eq_principle.strict_eq(nondet)
+        result = json.loads(result_str)
 
         scores = self._get_scores()
         key = f"{round_id}:{player_address}"
@@ -134,25 +122,21 @@ No markdown, no explanation."""
         latest_a = hist_a[-1] if hist_a else {}
         latest_b = hist_b[-1] if hist_b else {}
 
-        prompt = f"""Compare two survival plans based on scores.
+        task = f"""Compare two survival plan scores and respond with the following JSON format:
 Player A ({player_a}): {json.dumps(latest_a)}
 Player B ({player_b}): {json.dumps(latest_b)}
-Return ONLY valid JSON with: winner (address or "tie"), margin (int), reasoning (1 sentence)."""
+{{
+    "winner": str, // player address of winner or "tie"
+    "margin": int, // difference in overall_score, 0 if tie
+    "reasoning": str // 1 sentence explanation
+}}
+It is mandatory that you respond only using the JSON format above, nothing else."""
 
-        def leader_fn():
-            raw = gl.nondet.exec_prompt(prompt)
-            fence = chr(96) * 3
-            cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
-            return json.loads(cleaned)
+        def nondet() -> str:
+            result = gl.nondet.exec_prompt(task).replace("```json", "").replace("```", "")
+            return json.dumps(json.loads(result), sort_keys=True)
 
-        def validator_fn(leader_result):
-            if not isinstance(leader_result, gl.vm.Return):
-                return False
-            val = leader_result.result
-            return isinstance(val, dict) and "winner" in val
-
-        result = gl.run_nondet_unsafe(leader_fn, validator_fn)
-        return json.dumps(result)
+        return gl.eq_principle.strict_eq(nondet)
 
     @gl.public.write
     def flag_score(self, round_id: str, player_address: str) -> typing.Any:
