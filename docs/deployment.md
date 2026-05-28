@@ -1,173 +1,171 @@
 # SurvivalMind — Deployment Guide
 
-Full step-by-step guide for deploying SurvivalMind contracts and frontend to GenLayer Testnet Bradbury and Vercel.
+Full deployment reference for SurvivalMind on GenLayer Studionet.
+
+---
+
+## Deployed Contracts
+
+| Contract | Address | Deploy TX |
+|---|---|---|
+| scenario.py | 0xf3c6B770Df0aA0e9D2c1A49c8Cf8a6E3220236d9 | https://explorer-studio.genlayer.com/tx/0x4d3edf475ba59a40ac3da3b542a2dea396513a6ec553f85d16cce978fc81ba35 |
+| submission.py | 0x3F943704fCB873f8269CA7187584fE02f76346e6 | https://explorer-studio.genlayer.com/tx/0x603604236929e74cff40e77401801d087ee1da735f0d1e21b0764b49aa878d6c |
+| scoring.py | 0xD6052D3b0312898F828afA752bc2430E9Dd29c45 | https://explorer-studio.genlayer.com/tx/0x097d6bcf5c91dd23ba618f6552ee8d57f7d143a65ae26900fdb3f40c289ede46 |
+
+**Live app:** https://genlayer-survivalmind.vercel.app/
+
+**Explorer:** https://explorer-studio.genlayer.com
 
 ---
 
 ## Prerequisites
 
-- Python 3.10+
-- Node.js 18+
-- `genvm-linter` installed: `pip install genvm-linter`
-- MetaMask with GenLayer Testnet Bradbury configured
+- MetaMask with GenLayer Studionet configured
 - GEN tokens from the testnet faucet: https://faucet.genlayer.foundation
+- Node.js 18+
 - A Vercel account
 
 ---
 
-## Step 1 — Lint the Contracts
+## Deploying New Contracts
 
-Before deploying, verify all three contracts pass the linter.
+If redeploying from scratch, follow these steps for each contract.
 
-```bash
-genvm-lint check contracts/scenario.py
-genvm-lint check contracts/submission.py
-genvm-lint check contracts/scoring.py
-```
+### Step 1 — Open Studio
 
-All three must exit with code 0. Fix any errors before proceeding. Never deploy a contract that fails lint.
+Go to https://studio.genlayer.com and connect your MetaMask wallet.
 
----
+### Step 2 — Upload Contract
 
-## Step 2 — Deploy Contracts via Studio
+For each of the three contracts:
 
-Go to [studio.genlayer.com](https://studio.genlayer.com).
-
-Connect your MetaMask wallet to GenLayer Testnet Bradbury (Studionet).
-
-For each of the three contracts, follow these steps:
-
-1. Click **Upload Contract** (do not paste — upload the `.py` file directly)
+1. Click **Upload Contract** — upload the `.py` file directly, never paste
 2. Set the constructor parameter `game_name` to `"SurvivalMind"`
 3. Click **Deploy**
-4. Wait for the transaction to be accepted
-5. Copy the **contract address** and **transaction URL** from the explorer
+4. Wait for the transaction to reach FINALIZED status
+5. Copy the contract address and transaction URL from the explorer
 
 Deploy in this order:
 
-1. `scenario.py` → copy address as `SCENARIO_ADDRESS`
-2. `submission.py` → copy address as `SUBMISSION_ADDRESS`
-3. `scoring.py` → copy address as `SCORING_ADDRESS`
+1. `scenario.py` — copy address as `SCENARIO_ADDRESS`
+2. `submission.py` — copy address as `SUBMISSION_ADDRESS`
+3. `scoring.py` — copy address as `SCORING_ADDRESS`
 
----
+### Step 3 — Verify on Explorer
 
-## Step 3 — Verify Deployments
+After each deployment, check https://explorer-studio.genlayer.com:
 
-After each deployment, verify on [explorer-studio.genlayer.com](https://explorer-studio.genlayer.com):
-
-- Transaction status: Accepted
+- Transaction status: Finalized
+- GENVM Result: Success
 - Contract address is visible
-- Constructor call succeeded
 
 ---
 
-## Step 4 — Configure Frontend Environment
+## Frontend Environment
 
-In the `frontend/` directory, copy the example env file:
+The frontend reads contract addresses from environment variables.
 
-```bash
-cp .env.example .env
-```
-
-Fill in the contract addresses from Step 2:
-
-```
-NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRESS=0xYourScenarioAddress
-NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS=0xYourSubmissionAddress
-NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS=0xYourScoringAddress
-```
-
----
-
-## Step 5 — Run Locally
+### Local Development
 
 ```bash
 cd frontend
+cp .env.example .env
+```
+
+Fill in `.env`:
+
+```
+NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRESS=0xf3c6B770Df0aA0e9D2c1A49c8Cf8a6E3220236d9
+NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS=0x3F943704fCB873f8269CA7187584fE02f76346e6
+NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS=0xD6052D3b0312898F828afA752bc2430E9Dd29c45
+```
+
+Then run:
+
+```bash
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+### Vercel Deployment
 
-Test the full game flow:
-1. Connect MetaMask
-2. Click "Generate Scenario" — verify a scenario appears on-chain
-3. Write a survival plan and submit
-4. Verify the AI score appears
-5. Check the leaderboard updates
+1. Go to https://vercel.com/new → Import `genlayer-survivalmind`
+2. Set **Root Directory** to `frontend`
+3. Add environment variables:
+
+| Key | Value |
+|---|---|
+| `NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRESS` | `0xf3c6B770Df0aA0e9D2c1A49c8Cf8a6E3220236d9` |
+| `NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS` | `0x3F943704fCB873f8269CA7187584fE02f76346e6` |
+| `NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS` | `0xD6052D3b0312898F828afA752bc2430E9Dd29c45` |
+
+4. Click **Deploy**
 
 ---
 
-## Step 6 — Deploy to Vercel
+## Testing After Deployment
 
-### Option A — Vercel CLI
+### Test Contract Directly in Studio
 
-```bash
-npm install -g vercel
-cd frontend
-vercel --prod
+Before testing the frontend, verify each contract works in Studio:
+
+1. Go to https://studio.genlayer.com → open scenario contract
+2. Go to **Write Contract** tab
+3. Call `generate_scenario` with `round_id = "test1"`
+4. Wait for FINALIZED status
+5. Go to **Read Contract** tab
+6. Call `get_scenario` with `round_id = "test1"`
+7. Confirm the scenario JSON is returned
+
+### Test Full Frontend Flow
+
+1. Open https://genlayer-survivalmind.vercel.app/
+2. Connect MetaMask — confirm wallet badge appears
+3. Click **Generate Scenario** — MetaMask will prompt, confirm
+4. Wait 1-3 minutes for AI consensus
+5. Write a survival plan (minimum 20 characters)
+6. Click **Submit to AI Judge** — two transactions will be sent
+7. Wait for scoring consensus
+8. Verify score and feedback appear
+9. Check leaderboard updates
+
+---
+
+## Contract Design Notes
+
+All three contracts use the pinned dependency:
+
+```python
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 ```
 
-When prompted, set environment variables:
-- `NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRESS`
-- `NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS`
-- `NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS`
+LLM calls use the equivalence principle for multi-validator consensus:
 
-### Option B — Vercel Dashboard (GitHub import)
+```python
+def nondet() -> str:
+    result = gl.nondet.exec_prompt(task).replace("```json", "").replace("```", "")
+    return json.dumps(json.loads(result), sort_keys=True)
 
-1. Push the repo to GitHub
-2. Go to [vercel.com/new](https://vercel.com/new)
-3. Import the repository
-4. Set **Root Directory** to `frontend`
-5. Add all three environment variables under **Environment Variables**
-6. Click **Deploy**
+result_str = gl.eq_principle.strict_eq(nondet)
+```
 
-After deployment, copy the Vercel URL (e.g. `survivalmind.vercel.app`).
-
----
-
-## Step 7 — Test the Live Deployment
-
-1. Open the Vercel URL in a browser with MetaMask installed
-2. Connect wallet
-3. Generate a scenario — confirm a transaction goes to GenLayer
-4. Submit a plan — confirm two transactions (submission + scoring)
-5. Verify scores and leaderboard appear
-6. Check [explorer-studio.genlayer.com](https://explorer-studio.genlayer.com) that all transactions are accepted
-
----
-
-## Contract Addresses Reference
-
-After deployment, record all addresses here:
-
-| Contract | Address | Explorer TX |
-|---|---|---|
-| scenario.py | | |
-| submission.py | | |
-| scoring.py | | |
+All contracts implement `refresh()` as required. Write functions return `typing.Any`. Storage writes always happen outside the `nondet()` block.
 
 ---
 
 ## Troubleshooting
 
-**MetaMask shows wrong network**
-The frontend calls `client.connect("testnetBradbury")` before every write. If MetaMask rejects, manually add GenLayer Testnet Bradbury to MetaMask: RPC and Chain ID available at [docs.genlayer.com](https://docs.genlayer.com).
+**Transaction reverted at consensus contract**
+The frontend is connecting to the wrong network. Ensure `studionet` is used everywhere, not `testnetBradbury`.
 
-**Transaction times out**
-GenLayer validator consensus can take 30–120 seconds. The frontend retries up to 60 times at 5-second intervals. Wait it out before assuming failure.
+**Contract ERROR on explorer**
+Check the stderr in the transaction detail. Common causes: wrong dependency hash, API function not found, storage write inside nondet block.
 
-**Scoring returns execution error**
-Check that the scenario JSON passed to `score_plan` is valid. The scoring contract parses it inline in the prompt. If the scenario generation was incomplete, regenerate the scenario first.
+**readContract returns empty object**
+The contract state may not be readable immediately after finalization. The frontend polls up to 20 times at 4-second intervals. If it still fails, check the explorer to confirm the write transaction succeeded.
 
-**Lint error E025/E026**
-Storage writes inside `leader_fn`. Restructure so all `self.X = ...` assignments happen after `gl.run_nondet_unsafe` returns, never inside `leader_fn` or `validator_fn`.
+**MetaMask UnauthorizedProviderError**
+Call `eth_requestAccounts` before creating the write client. The frontend handles this automatically.
 
----
-
-## Notes
-
-- All three contracts use `game_name: str` as their constructor parameter so GenLayer Studio prompts for input on deploy.
-- `refresh()` is implemented on all contracts as required by the platform.
-- The `run_nondet_unsafe` pattern with `validator_fn` is used on all LLM calls that produce scored outputs, ensuring multi-validator consensus.
-- No ETH, no token transfers, no financial logic. Pure utility contracts.
+**Transaction timeout in Mises browser**
+GenLayer consensus takes 1-3 minutes. The Mises browser built-in wallet may time out. Use the standalone MetaMask app if possible.
