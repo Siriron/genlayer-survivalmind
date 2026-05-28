@@ -27,32 +27,25 @@ class SurvivalScenario(gl.Contract):
 
     @gl.public.write
     def generate_scenario(self, round_id: str) -> typing.Any:
-        prompt = """You are a survival game scenario generator.
+        task = """Generate a unique vivid survival scenario for a game. Respond with the following JSON format:
+{
+    "environment": str, // short name e.g. "Arctic Tundra"
+    "description": str, // 2-3 sentences setting the scene
+    "available_resources": list, // list of 4-6 specific item strings
+    "immediate_threat": str, // the single most pressing danger
+    "difficulty": str // one of: easy, medium, hard, extreme
+}
+It is mandatory that you respond only using the JSON format above,
+nothing else. Don't include any other words or characters,
+your output must be only JSON without any formatting prefix or suffix.
+This result should be perfectly parsable by a JSON parser without errors."""
 
-Generate a unique vivid survival scenario. Return ONLY a JSON object with these exact fields:
-- environment: string (short name, e.g. "Arctic Tundra")
-- description: string (2-3 sentences setting the scene)
-- available_resources: list of 4-6 specific item strings
-- immediate_threat: string (the single most pressing danger)
-- difficulty: string (one of: easy, medium, hard, extreme)
+        def nondet() -> str:
+            result = gl.nondet.exec_prompt(task).replace("```json", "").replace("```", "")
+            return json.dumps(json.loads(result), sort_keys=True)
 
-No explanation, no markdown, only valid JSON."""
-
-        def leader_fn():
-            raw = gl.nondet.exec_prompt(prompt)
-            fence = chr(96) * 3
-            cleaned = raw.strip().replace(fence + "json", "").replace(fence, "").strip()
-            return json.loads(cleaned)
-
-        def validator_fn(leader_result):
-            if not isinstance(leader_result, gl.vm.Return):
-                return False
-            val = leader_result.result
-            if not isinstance(val, dict):
-                return False
-            return all(k in val for k in ["environment", "description", "available_resources", "immediate_threat", "difficulty"])
-
-        result = gl.run_nondet_unsafe(leader_fn, validator_fn)
+        result_str = gl.eq_principle.strict_eq(nondet)
+        result = json.loads(result_str)
 
         scenarios = self._get_scenarios()
         entry = {
