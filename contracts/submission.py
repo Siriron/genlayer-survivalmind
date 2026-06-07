@@ -1,4 +1,4 @@
-# { "Depends": "py-genlayer:latest" }
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 
 from genlayer import *
 import json
@@ -28,7 +28,8 @@ class SurvivalSubmission(gl.Contract):
     def _save_player_history(self, data: dict):
         self.player_history = json.dumps(data)
 
-    def _now() -> str:
+    # FIX: was missing `self` parameter — caused a TypeError at runtime
+    def _now(self) -> str:
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @gl.public.write
@@ -42,7 +43,7 @@ class SurvivalSubmission(gl.Contract):
         entry = {
             "player": player_address,
             "plan": plan,
-            "submitted_at": SurvivalSubmission._now(),
+            "submitted_at": self._now(),
             "scored": False,
             "score": None,
         }
@@ -53,7 +54,7 @@ class SurvivalSubmission(gl.Contract):
             history[player_address] = []
         history[player_address].append({
             "round_id": round_id,
-            "submitted_at": SurvivalSubmission._now(),
+            "submitted_at": self._now(),
         })
         if len(history[player_address]) > 50:
             history[player_address] = history[player_address][-50:]
@@ -68,7 +69,7 @@ class SurvivalSubmission(gl.Contract):
         sub = round_subs.get(player_address, {})
         if not sub:
             return f"No submission found for {player_address} in round {round_id}"
-        sub["refreshed_at"] = SurvivalSubmission._now()
+        sub["refreshed_at"] = self._now()
         submissions[round_id][player_address] = sub
         self._save_submissions(submissions)
         return f"Submission refreshed for {player_address} in round {round_id}"
@@ -82,7 +83,7 @@ class SurvivalSubmission(gl.Contract):
             return f"Player {player_address} not found in round {round_id}"
         submissions[round_id][player_address]["scored"] = True
         submissions[round_id][player_address]["score"] = score
-        submissions[round_id][player_address]["scored_at"] = SurvivalSubmission._now()
+        submissions[round_id][player_address]["scored_at"] = self._now()
         self._save_submissions(submissions)
         return f"Marked scored for {player_address} in round {round_id}"
 
@@ -92,7 +93,7 @@ class SurvivalSubmission(gl.Contract):
         if round_id not in submissions or player_address not in submissions[round_id]:
             return "Submission not found"
         submissions[round_id][player_address]["flagged"] = True
-        submissions[round_id][player_address]["flagged_at"] = SurvivalSubmission._now()
+        submissions[round_id][player_address]["flagged_at"] = self._now()
         self._save_submissions(submissions)
         return f"Flagged submission from {player_address} in round {round_id}"
 

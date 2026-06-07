@@ -59,7 +59,11 @@ This result should be perfectly parsable by a JSON parser without errors."""
             result = gl.nondet.exec_prompt(task).replace("```json", "").replace("```", "")
             return json.dumps(json.loads(result), sort_keys=True)
 
-        result_str = gl.eq_principle.strict_eq(nondet)
+        # FIX: LLM scoring output is nondeterministic — validators will produce
+        # different (but equally valid) scores. non_comparative lets each validator
+        # independently commit its own result without requiring cross-validator agreement
+        # on the exact JSON bytes.
+        result_str = gl.eq_principle.non_comparative(nondet)
         result = json.loads(result_str)
 
         scores = self._get_scores()
@@ -136,7 +140,8 @@ It is mandatory that you respond only using the JSON format above, nothing else.
             result = gl.nondet.exec_prompt(task).replace("```json", "").replace("```", "")
             return json.dumps(json.loads(result), sort_keys=True)
 
-        return gl.eq_principle.strict_eq(nondet)
+        # FIX: same reason as score_plan — LLM comparison output is nondeterministic.
+        return gl.eq_principle.non_comparative(nondet)
 
     @gl.public.write
     def flag_score(self, round_id: str, player_address: str) -> typing.Any:

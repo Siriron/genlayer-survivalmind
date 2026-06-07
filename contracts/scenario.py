@@ -44,7 +44,9 @@ This result should be perfectly parsable by a JSON parser without errors."""
             result = gl.nondet.exec_prompt(task).replace("```json", "").replace("```", "")
             return json.dumps(json.loads(result), sort_keys=True)
 
-        result_str = gl.eq_principle.strict_eq(nondet)
+        # FIX: LLM output is never byte-identical across validators.
+        # non_comparative lets each validator independently accept its own result.
+        result_str = gl.eq_principle.non_comparative(nondet)
         result = json.loads(result_str)
 
         scenarios = self._get_scenarios()
