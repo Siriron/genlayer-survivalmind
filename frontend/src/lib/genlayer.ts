@@ -8,6 +8,19 @@ export const SCENARIO_ADDRESS = (process.env.NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRE
 export const SUBMISSION_ADDRESS = (process.env.NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS || "") as `0x${string}`;
 export const SCORING_ADDRESS = (process.env.NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS || "") as `0x${string}`;
 
+// Normalize any thrown value into a readable string
+export function extractError(e: unknown): string {
+  if (!e) return "Unknown error";
+  if (typeof e === "string") return e;
+  if (e instanceof Error) return e.message;
+  if (typeof e === "object") {
+    const obj = e as Record<string, any>;
+    // genlayer-js throws plain objects with message, shortMessage, or details
+    return obj.message || obj.shortMessage || obj.details || obj.reason || JSON.stringify(e);
+  }
+  return String(e);
+}
+
 export async function connectWallet(): Promise<string> {
   if (typeof window === "undefined") throw new Error("No window");
   const eth = (window as any).ethereum;
@@ -17,7 +30,7 @@ export async function connectWallet(): Promise<string> {
   return accounts[0];
 }
 
-// Read — no wallet needed, per official docs
+// Read — no wallet needed
 export async function readContract(
   address: `0x${string}`,
   functionName: string,
@@ -33,7 +46,7 @@ export async function readContract(
   return result;
 }
 
-// Write — needs wallet + connect per official docs
+// Write — needs wallet + connect (no args to connect, no value field)
 export async function writeContract(
   walletAddress: string,
   contractAddress: `0x${string}`,
@@ -48,13 +61,12 @@ export async function writeContract(
     account: walletAddress as `0x${string}`,
     provider: eth,
   } as any);
-  // Must connect before writing — per official docs
-  await (client as any).connect("studionet");
+  // connect() takes no arguments in genlayer-js ^1.1.7
+  await (client as any).connect();
   const hash = await client.writeContract({
     address: contractAddress,
     functionName,
     args,
-    value: BigInt(0),
   } as any);
   return hash as string;
 }
