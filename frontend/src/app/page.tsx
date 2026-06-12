@@ -6,6 +6,7 @@ import {
   readContract,
   writeContract,
   waitForTx,
+  extractError,
   SCENARIO_ADDRESS,
   SUBMISSION_ADDRESS,
   SCORING_ADDRESS,
@@ -112,7 +113,7 @@ export default function Home() {
       const addr = await connectWallet();
       setWallet(addr);
     } catch (e) {
-      setError(String(e));
+      setError(extractError(e));
     }
   }
 
@@ -154,7 +155,7 @@ export default function Home() {
       setPhase("submitting");
       setTxStatus("");
     } catch (e) {
-      setError(String(e));
+      setError(extractError(e));
       setPhase("idle");
       setTxStatus("");
     }
@@ -209,7 +210,7 @@ export default function Home() {
       setTxStatus("");
       await loadLeaderboard();
     } catch (e) {
-      setError(String(e));
+      setError(extractError(e));
       setPhase("submitting");
       setTxStatus("");
     }
