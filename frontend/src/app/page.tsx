@@ -129,13 +129,15 @@ export default function Home() {
     try {
       setTxStatus("Sending transaction to GenLayer...");
       const hash = await writeContract(wallet, SCENARIO_ADDRESS, "generate_scenario", [newRound]);
-      setTxStatus("Waiting for AI consensus... (1-3 minutes)");
+      setTxStatus("Waiting for AI consensus... (may take 2-5 minutes)");
       await waitForTx(hash);
-      setTxStatus("Reading scenario from chain...");
-      // Poll until data is available
+      // Poll for up to ~5 min (40 attempts x 8s). Read first, then wait.
+      // State may lag finalization by a few seconds, hence the interval between attempts.
+      const SCENARIO_POLL_ATTEMPTS = 40;
+      const POLL_INTERVAL_MS = 8000;
       let parsed: any = null;
-      for (let i = 0; i < 20; i++) {
-        await new Promise((r) => setTimeout(r, 4000));
+      setTxStatus("Reading scenario from chain...");
+      for (let i = 0; i < SCENARIO_POLL_ATTEMPTS; i++) {
         try {
           const raw = await readContract(SCENARIO_ADDRESS, "get_scenario", [newRound]);
           const candidate = parseContractResult(raw);
@@ -146,10 +148,13 @@ export default function Home() {
         } catch {
           // keep retrying
         }
-        setTxStatus(`Reading scenario... (attempt ${i + 2}/20)`);
+        if (parsed) break;
+        const elapsed = Math.round(((i + 1) * POLL_INTERVAL_MS) / 1000);
+        setTxStatus("Reading scenario from chain... (" + elapsed + "s elapsed)");
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
       }
       if (!parsed) {
-        throw new Error("Scenario not found on chain. Check explorer and try again.");
+        throw new Error("Scenario not found after 5 minutes. TX was sent — check GenLayer Explorer, then try again.");
       }
       setScenario(parsed as Scenario);
       setPhase("submitting");
@@ -183,13 +188,14 @@ export default function Home() {
         scenarioJson,
         plan.trim(),
       ]);
-      setTxStatus("Waiting for scoring consensus... (1-3 minutes)");
+      setTxStatus("Waiting for scoring consensus... (may take 2-5 minutes)");
       await waitForTx(scoreHash);
-
-      setTxStatus("Reading score from chain...");
+      // Poll for up to ~5 min (40 attempts x 8s). Read first, then wait.
+      const SCORE_POLL_ATTEMPTS = 40;
+      const SCORE_POLL_MS = 8000;
       let result: any = null;
-      for (let i = 0; i < 20; i++) {
-        await new Promise((r) => setTimeout(r, 4000));
+      setTxStatus("Reading score from chain...");
+      for (let i = 0; i < SCORE_POLL_ATTEMPTS; i++) {
         try {
           const raw = await readContract(SCORING_ADDRESS, "get_score", [roundId, wallet]);
           const candidate = parseContractResult(raw);
@@ -200,10 +206,13 @@ export default function Home() {
         } catch {
           // keep retrying
         }
-        setTxStatus(`Reading score... (attempt ${i + 2}/20)`);
+        if (result) break;
+        const elapsed = Math.round(((i + 1) * SCORE_POLL_MS) / 1000);
+        setTxStatus("Reading score from chain... (" + elapsed + "s elapsed)");
+        await new Promise((r) => setTimeout(r, SCORE_POLL_MS));
       }
       if (!result) {
-        throw new Error("Score not found on chain. Check explorer and try again.");
+        throw new Error("Score not found after 5 minutes. TX was sent — check GenLayer Explorer, then try again.");
       }
       setScore(result as ScoreResult);
       setPhase("results");
