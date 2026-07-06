@@ -8,21 +8,71 @@ export const SCENARIO_ADDRESS = (process.env.NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRE
 export const SUBMISSION_ADDRESS = (process.env.NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS || "") as `0x${string}`;
 export const SCORING_ADDRESS = (process.env.NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS || "") as `0x${string}`;
 
+// JSON.stringify that never throws — BigInt (common in gas/value fields on
+// wallet/RPC error objects) and circular refs (common on provider/request
+// objects) both make plain JSON.stringify() throw, which previously meant
+// extractError() itself could crash instead of returning a string.
+function safeStringify(value: unknown): string {
+  try {
+    return JSON.stringify(value, (_key, v) =>
+      typeof v === "bigint" ? v.toString() : v
+    );
+  } catch {
+    try {
+      return String(value);
+    } catch {
+      return "Unknown error";
+    }
+  }
+}
+
 // Normalize any thrown value into a readable string.
-// genlayer-js often throws plain objects, not Error instances.
+// genlayer-js / MetaMask often throw plain EIP-1193 objects, not Error
+// instances — plain objects have no custom toString(), so naive
+// `${e}` or `"Error: " + e` interpolation renders literally as
+// "[object Object]". Every field below is re-checked for type before
+// being returned, since some SDKs nest another object (not a string)
+// under `.message` or `.data`.
 export function extractError(e: unknown): string {
   if (!e) return "Unknown error";
   if (typeof e === "string") return e;
-  if (e instanceof Error) return e.message;
+  if (typeof e === "bigint" || typeof e === "number" || typeof e === "boolean") {
+    return String(e);
+  }
+  if (e instanceof Error) {
+    // Some libraries attach a more specific nested error under `.cause`.
+    const cause = (e as any).cause;
+    if (cause && cause !== e) {
+      const causeMsg = extractError(cause);
+      if (causeMsg && causeMsg !== "Unknown error") return causeMsg;
+    }
+    return e.message || e.name || safeStringify(e);
+  }
+  if (Array.isArray(e)) {
+    return e.map((item) => extractError(item)).join("; ");
+  }
   if (typeof e === "object") {
     const obj = e as Record<string, any>;
-    return (
-      obj.message ||
-      obj.shortMessage ||
-      obj.details ||
-      obj.reason ||
-      JSON.stringify(e)
-    );
+    const candidates = [
+      obj.message,
+      obj.shortMessage,
+      obj.details,
+      obj.reason,
+      obj.data?.message,
+      obj.error?.message,
+    ];
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim()) return candidate;
+      // A candidate can itself be a nested error-shaped object.
+      if (candidate && typeof candidate === "object") {
+        const nested = extractError(candidate);
+        if (nested && nested !== "Unknown error") return nested;
+      }
+    }
+    if (typeof obj.code !== "undefined") {
+      return `Request failed (code ${obj.code}): ${safeStringify(obj)}`;
+    }
+    return safeStringify(e);
   }
   return String(e);
 }
@@ -52,10 +102,10 @@ export async function readContract(
   return result;
 }
 
-// Write client — MetaMask browser pattern per official docs:
+// Write client — MetaMask browser pattern:
 //   createClient({ chain, account, provider })
-//   await client.connect("studionet")   <-- docs require the network name string
 //   writeContract({ ..., value: BigInt(0) })
+// client.connect() is attempted as a best-effort chain switch only — see below.
 export async function writeContract(
   walletAddress: string,
   contractAddress: `0x${string}`,
@@ -72,10 +122,19 @@ export async function writeContract(
     provider: eth,
   } as any);
 
-  // Docs explicitly require passing the network name string to connect().
-  // This switches MetaMask to the correct chain; without it the wallet may
-  // be on the wrong network and writeContract will throw or silently fail.
-  await (client as any).connect("studionet");
+  // Best-effort chain switch. This is NOT a documented genlayer-js method on
+  // every SDK version — if it doesn't exist or rejects, we must not let that
+  // kill the transaction, since client.writeContract() routes through the
+  // `chain` config above regardless of MetaMask's active network. Swallowing
+  // failures here (instead of throwing) is what previously turned an
+  // unrelated/optional step into a hard failure surfaced to the player.
+  try {
+    if (typeof (client as any).connect === "function") {
+      await (client as any).connect("studionet");
+    }
+  } catch (connectErr) {
+    console.warn("client.connect(\"studionet\") skipped:", extractError(connectErr));
+  }
 
   const hash = await client.writeContract({
     address: contractAddress,
