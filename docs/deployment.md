@@ -8,9 +8,9 @@ Full deployment reference for SurvivalMind on GenLayer Studionet.
 
 | Contract | Address | Deploy TX |
 |---|---|---|
-| scenario.py | 0xf3c6B770Df0aA0e9D2c1A49c8Cf8a6E3220236d9 | https://explorer-studio.genlayer.com/tx/0x4d3edf475ba59a40ac3da3b542a2dea396513a6ec553f85d16cce978fc81ba35 |
-| submission.py | 0x3F943704fCB873f8269CA7187584fE02f76346e6 | https://explorer-studio.genlayer.com/tx/0x603604236929e74cff40e77401801d087ee1da735f0d1e21b0764b49aa878d6c |
-| scoring.py | 0xD6052D3b0312898F828afA752bc2430E9Dd29c45 | https://explorer-studio.genlayer.com/tx/0x097d6bcf5c91dd23ba618f6552ee8d57f7d143a65ae26900fdb3f40c289ede46 |
+| scenario.py | 0xBB92C508DbaFa1bC2AbfeEc0a462540f68e9f171 | https://explorer-studio.genlayer.com/tx/0xde7c88b686a10cb757b19fbbe6c595d6090021bfc5d14fde5510a3a073c36ef5 |
+| submission.py | 0xa757Ce65c4F9c82B780C998479B7a079D98f66D4 | https://explorer-studio.genlayer.com/tx/0x6039f9604cbf0d60e41f241666cf73ad555339ec933921f892b24095867a49d9 |
+| scoring.py | 0xa6d7E7fcB2CfE673ACb1757293392bea042985fA | https://explorer-studio.genlayer.com/tx/0x0510673dbbc8774194be01df6af2d9bd457dd0bfe02fc18bcc5310c6b9bbbc67 |
 
 **Live app:** https://genlayer-survivalmind.vercel.app/
 
@@ -75,9 +75,9 @@ cp .env.example .env
 Fill in `.env`:
 
 ```
-NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRESS=0xf3c6B770Df0aA0e9D2c1A49c8Cf8a6E3220236d9
-NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS=0x3F943704fCB873f8269CA7187584fE02f76346e6
-NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS=0xD6052D3b0312898F828afA752bc2430E9Dd29c45
+NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRESS=0xBB92C508DbaFa1bC2AbfeEc0a462540f68e9f171
+NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS=0xa757Ce65c4F9c82B780C998479B7a079D98f66D4
+NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS=0xa6d7E7fcB2CfE673ACb1757293392bea042985fA
 ```
 
 Then run:
@@ -95,9 +95,9 @@ npm run dev
 
 | Key | Value |
 |---|---|
-| `NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRESS` | `0xf3c6B770Df0aA0e9D2c1A49c8Cf8a6E3220236d9` |
-| `NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS` | `0x3F943704fCB873f8269CA7187584fE02f76346e6` |
-| `NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS` | `0xD6052D3b0312898F828afA752bc2430E9Dd29c45` |
+| `NEXT_PUBLIC_SCENARIO_CONTRACT_ADDRESS` | `0xBB92C508DbaFa1bC2AbfeEc0a462540f68e9f171` |
+| `NEXT_PUBLIC_SUBMISSION_CONTRACT_ADDRESS` | `0xa757Ce65c4F9c82B780C998479B7a079D98f66D4` |
+| `NEXT_PUBLIC_SCORING_CONTRACT_ADDRESS` | `0xa6d7E7fcB2CfE673ACb1757293392bea042985fA` |
 
 4. Click **Deploy**
 
@@ -139,14 +139,16 @@ All three contracts use the pinned dependency:
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 ```
 
-LLM calls use the equivalence principle for multi-validator consensus:
+LLM calls use the equivalence principle for multi-validator consensus. Raw LLM
+output is never byte-identical across validators, so `non_comparative` is used
+instead of `strict_eq` — each validator independently accepts its own result:
 
 ```python
 def nondet() -> str:
     result = gl.nondet.exec_prompt(task).replace("```json", "").replace("```", "")
     return json.dumps(json.loads(result), sort_keys=True)
 
-result_str = gl.eq_principle.strict_eq(nondet)
+result_str = gl.eq_principle.non_comparative(nondet)
 ```
 
 All contracts implement `refresh()` as required. Write functions return `typing.Any`. Storage writes always happen outside the `nondet()` block.
