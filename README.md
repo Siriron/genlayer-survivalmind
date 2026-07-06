@@ -14,7 +14,7 @@ Live: https://genlayer-survivalmind.vercel.app/
 
 2. **Submit your plan** — Players write out their survival strategy in plain text, explaining step by step what they would do using the available resources to address the immediate threat.
 
-3. **AI judgment** — A second intelligent contract reads the scenario and the submitted plan, then prompts an LLM to score the plan across three dimensions. `gl.eq_principle.strict_eq` ensures consensus across multiple validators before the result is accepted on-chain.
+3. **AI judgment** — A second intelligent contract reads the scenario and the submitted plan, then prompts an LLM to score the plan across three dimensions. `gl.eq_principle.non_comparative` lets each validator independently accept its own LLM output, since raw LLM text is never byte-identical across validators.
 
 4. **Results on-chain** — Scores, verdicts, and feedback are stored permanently. A leaderboard tracks best scores across all players.
 
@@ -38,9 +38,11 @@ All contracts deployed on GenLayer Studionet.
 
 | Contract | Address | Deploy TX |
 |---|---|---|
-| scenario.py | 0xf3c6B770Df0aA0e9D2c1A49c8Cf8a6E3220236d9 | https://explorer-studio.genlayer.com/tx/0x4d3edf475ba59a40ac3da3b542a2dea396513a6ec553f85d16cce978fc81ba35 |
-| submission.py | 0x3F943704fCB873f8269CA7187584fE02f76346e6 | https://explorer-studio.genlayer.com/tx/0x603604236929e74cff40e77401801d087ee1da735f0d1e21b0764b49aa878d6c |
-| scoring.py | 0xD6052D3b0312898F828afA752bc2430E9Dd29c45 | https://explorer-studio.genlayer.com/tx/0x097d6bcf5c91dd23ba618f6552ee8d57f7d143a65ae26900fdb3f40c289ede46 |
+| scenario.py | 0xBB92C508DbaFa1bC2AbfeEc0a462540f68e9f171 | https://explorer-studio.genlayer.com/tx/0xde7c88b686a10cb757b19fbbe6c595d6090021bfc5d14fde5510a3a073c36ef5 |
+| submission.py | 0xa757Ce65c4F9c82B780C998479B7a079D98f66D4 | https://explorer-studio.genlayer.com/tx/0x6039f9604cbf0d60e41f241666cf73ad555339ec933921f892b24095867a49d9 |
+| scoring.py | 0xa6d7E7fcB2CfE673ACb1757293392bea042985fA | https://explorer-studio.genlayer.com/tx/0x0510673dbbc8774194be01df6af2d9bd457dd0bfe02fc18bcc5310c6b9bbbc67 |
+
+*(These are the current addresses after the compliance fix — pinned dependency hash, `non_comparative` equivalence principle. They match `frontend/.env.example`.)*
 
 ---
 
@@ -103,7 +105,7 @@ All contracts deployed on GenLayer Studionet.
 ## GenLayer Features Used
 
 - `gl.nondet.exec_prompt` — LLM inference for scenario generation and plan scoring
-- `gl.eq_principle.strict_eq` — Multi-validator consensus on LLM outputs
+- `gl.eq_principle.non_comparative` — Multi-validator consensus on nondeterministic LLM outputs (each validator independently accepts its own result rather than requiring byte-identical output)
 - Multiple write functions per contract — analyze, refresh, compare, flag, archive
 - Timestamped historical snapshots per round and player
 
